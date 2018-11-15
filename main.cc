@@ -1,5 +1,5 @@
 #include "ns3/core-module.h"
-#include "playground.cc"
+#include "src/playground.cc"
 
 using namespace ns3;
 

@@ -1,6 +1,3 @@
-#ifndef PLAYGROUND
-#define PLAYGROUND
-
 #include "ns3/core-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
@@ -41,5 +38,3 @@ inline void playground_build_topology()
   clientAppContainer.Start(Seconds(1.0));
   clientAppContainer.Stop(Days(1.0));
 }
-
-#endif
