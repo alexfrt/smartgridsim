@@ -1,3 +1,5 @@
+#include <thread>
+#include <chrono>
 #include "ns3/lte-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/core-module.h"
@@ -9,17 +11,18 @@
 #include "ns3/applications-module.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/netanim-module.h"
-#include "ns3/v4ping-helper.h"
+#include "ns3/flow-monitor-helper.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("SmartGridSim");
 
+void controlSimulationTime(const int maxSimulationTime, const int maxWallClockTimeInMinutes);
+
 int main(int argc, char *argv[])
 {
   LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
   LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
-  LogComponentEnable("V4Ping", LOG_LEVEL_INFO);
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
@@ -81,17 +84,53 @@ int main(int argc, char *argv[])
   UdpClientHelper client(routerHostAddress, 6565);
   client.Install(ueNodes);
 
-  // V4PingHelper ping(routerHostAddress);
-  // ApplicationContainer pingApps = ping.Install(ueNodes);
-  // pingApps.Start(Seconds(1.0));
-
   //Configure simulation output
   pgwRouterPointToPointHelper.EnablePcapAll("PGW-ROUTER");
   AnimationInterface anim("anim.xml");
 
-  Simulator::Stop(Minutes(1));
+  Ptr<FlowMonitor> flowMonitor;
+  FlowMonitorHelper flowHelper;
+  flowMonitor = flowHelper.InstallAll();
+
+  std::thread simulationTimeController(controlSimulationTime, 30, 5);
   Simulator::Run();
+  simulationTimeController.join();
+
+  flowMonitor->SerializeToXmlFile("FlowMon.xml", true, true);
   Simulator::Destroy();
 
   return 0;
+}
+
+void controlSimulationTime(const int maxSimulationTime, const int maxWallClockTimeInMinutes)
+{
+  time_t startTime;
+
+  Time simulationNow;
+  Time maxSimulationNow;
+  time_t wallNow;
+  time_t maxWallNow;
+
+  maxSimulationNow = Time::FromInteger(maxSimulationTime, Time::Unit::MIN);
+
+  time(&maxWallNow);
+  maxWallNow += maxWallClockTimeInMinutes * 60;
+
+  time(&startTime);
+
+  while ((simulationNow = Simulator::Now()) < maxSimulationNow && (wallNow = time(NULL)) < maxWallNow)
+  {
+    std::cout << "Simulation time of [" << simulationNow.ToInteger(Time::Unit::MIN)
+              << "/"
+              << maxSimulationNow.ToInteger(Time::Unit::MIN)
+              << "] minutes; Elapsed wall clock time of ["
+              << (wallNow - startTime) / 60
+              << "/"
+              << maxWallClockTimeInMinutes
+              << "] minutes."
+              << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+
+  Simulator::Stop();
 }
