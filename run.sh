@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 program=${PWD##*/}
 outputs="$PWD/outputs"
 
