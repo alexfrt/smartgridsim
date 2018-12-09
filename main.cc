@@ -15,19 +15,20 @@
 #include "ns3/flow-monitor.h"
 #include "ns3/geographic-positions.h"
 
-#define NUMBER_OF_DEVICES 100
-#define NUMBER_OF_ENBS 27
+#define NUMBER_OF_DEVICES 30
+#define NUMBER_OF_ENBS    12
 
 #define CENTER_LAT -3.749886
 #define CENTER_LNG -38.528574
 
-#define SIMULATION_TIME 5
-#define SIMULATION_CLOCK_TIME 300
+#define SIMULATION_TIME       20
+#define SIMULATION_CLOCK_TIME 60
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("SmartGridSim");
 
+Ptr<ListPositionAllocator> getEnbsPositionAllocator();
 Ptr<ListPositionAllocator> generateRandomPositionAllocatorAroundCenter(int n, int z, int radius);
 void controlSimulationTime(const int maxSimulationTime, const int maxWallClockTimeInMinutes);
 
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
   // TODO setup according to the actual positions
   MobilityHelper enbsMobilityHelper;
   enbsMobilityHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  enbsMobilityHelper.SetPositionAllocator(generateRandomPositionAllocatorAroundCenter(NUMBER_OF_ENBS, 100, 1200));
+  enbsMobilityHelper.SetPositionAllocator(getEnbsPositionAllocator());
   enbsMobilityHelper.Install(enbNodes);
 
   // Setup the mobility model to remaining nodes
@@ -112,9 +113,10 @@ int main(int argc, char *argv[])
   }
 
   //Attach all UEs to the eNB
+  lteHelper->AttachToClosestEnb(ueLteDevs, enbLteDevs);
   // lteHelper->Attach(ueLteDevs); // TODO make sure we are attaching according to some LTE algorithm
-  for (uint16_t i = 0; i < ueLteDevs.GetN(); i++)
-    lteHelper->Attach(ueLteDevs.Get(i), enbLteDevs.Get(i % enbLteDevs.GetN()));
+  // for (uint16_t i = 0; i < ueLteDevs.GetN(); i++)
+  //   lteHelper->Attach(ueLteDevs.Get(i), enbLteDevs.Get(i % enbLteDevs.GetN()));
 
   //Configure the applications
   UdpServerHelper serverApp(6565);
@@ -123,6 +125,7 @@ int main(int argc, char *argv[])
   for (uint32_t i = 0; i < ueNodes.GetN(); i++)
   {
     UdpClientHelper client(routerHostAddress, 6565);
+    client.SetAttribute("MaxPackets", UintegerValue(SIMULATION_TIME));
     client.SetAttribute("Interval", TimeValue(Seconds(rand() % 3 + 1)));
     client.SetAttribute("PacketSize", UintegerValue(100));
     ApplicationContainer appContainer = client.Install(ueNodes.Get(i));
@@ -216,6 +219,35 @@ Ptr<ListPositionAllocator> generateRandomPositionAllocatorAroundCenter(int n, in
   for (std::list<Vector>::iterator it = positions.begin(); it != positions.end(); it++)
   {
     positionAllocator->Add(*it);
+  }
+
+  return positionAllocator;
+}
+
+Ptr<ListPositionAllocator> getEnbsPositionAllocator()
+{
+  double coordinates[NUMBER_OF_ENBS][2] = {
+      {-3.755000, -38.523889},
+      {-3.753333, -38.518056},
+      {-3.746389, -38.522778},
+      {-3.745833, -38.526944},
+      {-3.743333, -38.519722},
+      {-3.740278, -38.526111},
+      {-3.738056, -38.534722},
+      {-3.740833, -38.539722},
+      {-3.747778, -38.538611},
+      {-3.744722, -38.534722},
+      {-3.750000, -38.530833},
+      {-3.757778, -38.533333}};
+
+  Ptr<ListPositionAllocator> positionAllocator = CreateObject<ListPositionAllocator>();
+  for (int i = 0; i < NUMBER_OF_ENBS; i++)
+  {
+    positionAllocator->Add(GeographicPositions::GeographicToCartesianCoordinates(
+        coordinates[i][0],
+        coordinates[i][1],
+        100,
+        GeographicPositions::EarthSpheroidType::SPHERE));
   }
 
   return positionAllocator;
