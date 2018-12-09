@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import xmltodict
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -31,7 +32,8 @@ def main():
 def make_figure_and_print_summary(series, name):
     sns.distplot(series)
     plt.savefig('outputs/%s.svg' % name)
-    plt.show()
+    if 'SHOWPLOT' in os.environ:
+        plt.show()
 
     stats = describe(series)
     mean = getattr(stats, 'mean')
