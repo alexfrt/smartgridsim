@@ -14,15 +14,9 @@
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/flow-monitor.h"
 #include "ns3/geographic-positions.h"
+#include "ns3/config-store.h"
 
-#define NUMBER_OF_DEVICES 30
-#define NUMBER_OF_ENBS    12
-
-#define CENTER_LAT -3.749886
-#define CENTER_LNG -38.528574
-
-#define SIMULATION_TIME       20
-#define SIMULATION_CLOCK_TIME 60
+#define NUMBER_OF_ENBS 12
 
 using namespace ns3;
 
@@ -30,12 +24,27 @@ NS_LOG_COMPONENT_DEFINE("SmartGridSim");
 
 Ptr<ListPositionAllocator> getEnbsPositionAllocator();
 Ptr<ListPositionAllocator> generateRandomPositionAllocatorAroundCenter(int n, int z, int radius);
-void controlSimulationTime(const int maxSimulationTime, const int maxWallClockTimeInMinutes);
+void controlSimulationTime(const int maxSimulationTimeInSeconds, const int maxElapsedClockTimeInSeconds);
 
 int main(int argc, char *argv[])
 {
   LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
   LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
+
+  int numberOfSmartMeters = 10;
+  int maxSimulationTimeInSeconds = 10;
+  int maxElapsedClockTimeInSeconds = 10;
+
+  CommandLine cmd;
+  cmd.AddValue("numberOfSmartMeters", "Number of Smart Meters", numberOfSmartMeters);
+  cmd.AddValue("maxSimulationTimeInSeconds", "Max simulation time in seconds", maxSimulationTimeInSeconds);
+  cmd.AddValue("maxElapsedClockTimeInSeconds", "Max elapsed clock time in seconds", maxElapsedClockTimeInSeconds);
+  cmd.Parse(argc, argv);
+
+  std::cout << "Number of Smart Meters: " << numberOfSmartMeters << std::endl;
+  std::cout << "Max simulation time in seconds: " << maxSimulationTimeInSeconds << std::endl;
+  std::cout << "Max elapsed clock time in seconds: " << maxElapsedClockTimeInSeconds << std::endl
+            << std::endl;
 
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
   Config::SetDefault("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue(5)); //Transmission Mode 5: MIMO Multi-User.
@@ -73,12 +82,12 @@ int main(int argc, char *argv[])
   NodeContainer ueNodes;
   NodeContainer enbNodes;
   enbNodes.Create(NUMBER_OF_ENBS);
-  ueNodes.Create(NUMBER_OF_DEVICES);
+  ueNodes.Create(numberOfSmartMeters);
 
   // Setup the mobility model for the smart meters
   MobilityHelper smartMetersMobilityHelper;
   smartMetersMobilityHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  smartMetersMobilityHelper.SetPositionAllocator(generateRandomPositionAllocatorAroundCenter(NUMBER_OF_DEVICES, 95, 1000));
+  smartMetersMobilityHelper.SetPositionAllocator(generateRandomPositionAllocatorAroundCenter(numberOfSmartMeters, 95, 1000));
   smartMetersMobilityHelper.Install(ueNodes);
 
   // Setup the mobility model for the enbs
@@ -125,7 +134,7 @@ int main(int argc, char *argv[])
   for (uint32_t i = 0; i < ueNodes.GetN(); i++)
   {
     UdpClientHelper client(routerHostAddress, 6565);
-    client.SetAttribute("MaxPackets", UintegerValue(SIMULATION_TIME));
+    client.SetAttribute("MaxPackets", UintegerValue(maxSimulationTimeInSeconds));
     client.SetAttribute("Interval", TimeValue(Seconds(rand() % 3 + 1)));
     client.SetAttribute("PacketSize", UintegerValue(100));
     ApplicationContainer appContainer = client.Install(ueNodes.Get(i));
@@ -133,7 +142,7 @@ int main(int argc, char *argv[])
   }
 
   //Configure simulation output
-  pgwRouterPointToPointHelper.EnablePcapAll("PGW-ROUTER");
+  // pgwRouterPointToPointHelper.EnablePcapAll("PGW-ROUTER");
 
   Ptr<FlowMonitor> flowMonitor;
   FlowMonitorHelper flowHelper;
@@ -159,9 +168,12 @@ int main(int argc, char *argv[])
   }
 
   //Run the simulation
-  std::thread simulationTimeController(controlSimulationTime, SIMULATION_TIME, SIMULATION_CLOCK_TIME);
-  Simulator::Run();
-  simulationTimeController.join();
+  if (maxSimulationTimeInSeconds > 0 && maxElapsedClockTimeInSeconds > 0)
+  {
+    std::thread simulationTimeController(controlSimulationTime, maxSimulationTimeInSeconds, maxSimulationTimeInSeconds);
+    Simulator::Run();
+    simulationTimeController.join();
+  }
 
   flowMonitor->SerializeToXmlFile("FlowMon.xml", true, true);
   Simulator::Destroy();
@@ -169,7 +181,7 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-void controlSimulationTime(const int maxSimulationTimeInSeconds, const int maxWallClockTimeInSeconds)
+void controlSimulationTime(const int maxSimulationTimeInSeconds, const int maxElapsedClockTimeInSeconds)
 {
   time_t startTime;
 
@@ -181,7 +193,7 @@ void controlSimulationTime(const int maxSimulationTimeInSeconds, const int maxWa
   maxSimulationNow = Time::FromInteger(maxSimulationTimeInSeconds, Time::Unit::S);
 
   time(&maxWallNow);
-  maxWallNow += maxWallClockTimeInSeconds;
+  maxWallNow += maxElapsedClockTimeInSeconds;
 
   time(&startTime);
 
@@ -193,7 +205,7 @@ void controlSimulationTime(const int maxSimulationTimeInSeconds, const int maxWa
               << "] seconds; Elapsed wall clock time of ["
               << wallNow - startTime
               << "/"
-              << maxWallClockTimeInSeconds
+              << maxElapsedClockTimeInSeconds
               << "] seconds."
               << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -207,8 +219,8 @@ Ptr<ListPositionAllocator> generateRandomPositionAllocatorAroundCenter(int n, in
 {
   Ptr<UniformRandomVariable> randomVariable = CreateObject<UniformRandomVariable>();
   std::list<Vector> positions = GeographicPositions::RandCartesianPointsAroundGeographicPoint(
-      CENTER_LAT,
-      CENTER_LNG,
+      -3.749886,
+      -38.528574,
       z,
       n,
       radius,

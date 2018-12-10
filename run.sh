@@ -12,6 +12,9 @@ mkdir -p ${outputsDir}
 # go to the ns-3 directory
 cd ../.. >/dev/null
 
+# do a fake run to compile the simulation program
+./waf --cwd="/tmp" --run "${program} --maxSimulationTimeInSeconds=0"
+
 # run the simulation
 for i in $(seq 1 ${numTrials}); do
     if [ `expr $i % ${numCores}` -eq 1 ] && [ $i != 1 ]
@@ -23,9 +26,11 @@ for i in $(seq 1 ${numTrials}); do
     echo "Starting trial ${i}"
     trialOutputDir=${outputsDir}/trial${i}
     mkdir -p ${trialOutputDir}
-    (./waf --cwd="${trialOutputDir}" --run ${program} > ${trialOutputDir}/out) &
-
-    sleep 1
+    (./waf --cwd="${trialOutputDir}" --run "${program} \
+        --numberOfSmartMeters=${numberOfSmartMeters} \
+        --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
+        --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
+        > ${trialOutputDir}/out) &
 done
 wait
 
