@@ -108,16 +108,16 @@ int main(int argc, char *argv[])
   Ptr<Ipv4StaticRouting> routerStaticRouting = ipv4RoutingHelper.GetStaticRouting(routerHost->GetObject<Ipv4>());
   routerStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
-  NodeContainer ueNodes;
+  NodeContainer smartMeterNodes;
   NodeContainer enbNodes;
   enbNodes.Create(NUMBER_OF_ENBS);
-  ueNodes.Create(numberOfSmartMeters);
+  smartMeterNodes.Create(numberOfSmartMeters);
 
   // Setup the mobility model for the smart meters
   MobilityHelper smartMetersMobilityHelper;
   smartMetersMobilityHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   smartMetersMobilityHelper.SetPositionAllocator(generateRandomPositionAllocatorAroundCenter(numberOfSmartMeters, 95, 1000));
-  smartMetersMobilityHelper.Install(ueNodes);
+  smartMetersMobilityHelper.Install(smartMeterNodes);
 
   // Setup the mobility model for the enbs
   MobilityHelper enbsMobilityHelper;
@@ -137,32 +137,32 @@ int main(int argc, char *argv[])
 
   // Install LTE Devices to the nodes
   NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice(enbNodes);
-  NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice(ueNodes);
+  NetDeviceContainer smartMeterLteDevs = lteHelper->InstallUeDevice(smartMeterNodes);
 
   // Install the IP stack on the UEs
-  internetHelper.Install(ueNodes);
-  Ipv4InterfaceContainer ueIpIface = epcHelper->AssignUeIpv4Address(ueLteDevs);
-  for (uint32_t u = 0; u < ueNodes.GetN(); u++)
+  internetHelper.Install(smartMeterNodes);
+  Ipv4InterfaceContainer smartMetersIpIface = epcHelper->AssignUeIpv4Address(smartMeterLteDevs);
+  for (uint32_t u = 0; u < smartMeterNodes.GetN(); u++)
   {
-    Ptr<Node> ueNode = ueNodes.Get(u);
+    Ptr<Node> ueNode = smartMeterNodes.Get(u);
     Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
     ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
   }
 
   //Attach all UEs to the eNB
-  lteHelper->Attach(ueLteDevs);
+  lteHelper->Attach(smartMeterLteDevs);
 
   //Configure the applications
   UdpServerHelper serverApp(6565);
   serverApp.Install(routerHost);
 
-  for (uint32_t i = 0; i < ueNodes.GetN(); i++)
+  for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
   {
     UdpClientHelper client(routerHostAddress, 6565);
     client.SetAttribute("MaxPackets", UintegerValue(maxSimulationTimeInSeconds));
     client.SetAttribute("Interval", TimeValue(Seconds(rand() % 3 + 1)));
     client.SetAttribute("PacketSize", UintegerValue(100));
-    ApplicationContainer appContainer = client.Install(ueNodes.Get(i));
+    ApplicationContainer appContainer = client.Install(smartMeterNodes.Get(i));
     appContainer.Start(Seconds(rand() % 3 + 1));
   }
 
@@ -174,13 +174,13 @@ int main(int argc, char *argv[])
   flowMonitor = flowHelper.InstallAll();
 
   AnimationInterface anim("anim.xml");
-  int pointsBetweenUeNodes = 10;
-  for (uint32_t i = 0; i < ueNodes.GetN(); i++)
+  int pointsBetweenSmartMeterNodes = 10;
+  for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
   {
-    anim.SetConstantPosition(ueNodes.Get(i), pointsBetweenUeNodes * i + pointsBetweenUeNodes, 10);
-    anim.UpdateNodeColor(ueNodes.Get(i), 0, 255, 0);
+    anim.SetConstantPosition(smartMeterNodes.Get(i), pointsBetweenSmartMeterNodes * i + pointsBetweenSmartMeterNodes, 10);
+    anim.UpdateNodeColor(smartMeterNodes.Get(i), 0, 255, 0);
   }
-  int pointsBetweenEnbNodes = pointsBetweenUeNodes * ueNodes.GetN() / enbNodes.GetN();
+  int pointsBetweenEnbNodes = pointsBetweenSmartMeterNodes * smartMeterNodes.GetN() / enbNodes.GetN();
   for (uint32_t i = 0; i < enbNodes.GetN(); i++)
   {
     anim.SetConstantPosition(enbNodes.Get(i), pointsBetweenEnbNodes * i + pointsBetweenEnbNodes, 30);
