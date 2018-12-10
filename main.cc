@@ -41,6 +41,10 @@ int main(int argc, char *argv[])
   cmd.AddValue("maxElapsedClockTimeInSeconds", "Max elapsed clock time in seconds", maxElapsedClockTimeInSeconds);
   cmd.Parse(argc, argv);
 
+  // if any of the params is set to 0, then nothing runs
+  if (numberOfSmartMeters < 1 || maxSimulationTimeInSeconds < 1 || maxElapsedClockTimeInSeconds < 1)
+    return 0;
+
   std::cout << "Number of Smart Meters: " << numberOfSmartMeters << std::endl;
   std::cout << "Max simulation time in seconds: " << maxSimulationTimeInSeconds << std::endl;
   std::cout << "Max elapsed clock time in seconds: " << maxElapsedClockTimeInSeconds << std::endl
@@ -168,13 +172,11 @@ int main(int argc, char *argv[])
   }
 
   //Run the simulation
-  if (maxSimulationTimeInSeconds > 0 && maxElapsedClockTimeInSeconds > 0)
-  {
-    std::thread simulationTimeController(controlSimulationTime, maxSimulationTimeInSeconds, maxSimulationTimeInSeconds);
-    Simulator::Run();
-    simulationTimeController.join();
-  }
+  std::thread simulationTimeController(controlSimulationTime, maxSimulationTimeInSeconds, maxElapsedClockTimeInSeconds);
+  Simulator::Run();
+  simulationTimeController.join();
 
+  //End of simulation
   flowMonitor->SerializeToXmlFile("FlowMon.xml", true, true);
   Simulator::Destroy();
 

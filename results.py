@@ -1,47 +1,67 @@
 #!/usr/bin/env python
 
 import os
-import xmltodict
-import seaborn as sns
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import describe
+import seaborn as sns
+import xmltodict
 
 
 def main():
-    with open('outputs/FlowMon.xml') as fd:
+    loss_series = list()
+    delay_series = list()
+    jitter_series = list()
+
+    outputs_dir = 'outputs'
+    for subdir in filter(lambda x: x.startswith('trial'), os.listdir(outputs_dir)):
+        trial_stats = calculate_trial_statistics("%s/%s" % (outputs_dir, subdir))
+        loss_series.append(trial_stats[0])
+        delay_series.append(trial_stats[1])
+        jitter_series.append(trial_stats[2])
+
+    make_figure_and_print_summary(loss_series, 'loss')
+    make_figure_and_print_summary(delay_series, 'delay')
+    make_figure_and_print_summary(jitter_series, 'jitter')
+
+
+def calculate_trial_statistics(directory):
+    with open('%s/FlowMon.xml' % directory) as fd:
         doc = xmltodict.parse(fd.read())
 
     flows = doc['FlowMonitor']['FlowStats']['Flow']
 
-    lost_percentages = list()
+    loss_percentages = list()
     delay_averages = list()
     jitter_averages = list()
 
     for flow in flows:
-        lost_percentages.append(100.0 * float(flow[u'@lostPackets']) / float(flow[u'@txPackets']))
+        loss_percentages.append(100.0 * float(flow[u'@lostPackets']) / float(flow[u'@txPackets']))
         if int(flow[u'@rxPackets']) > 1:
             delay_averages.append(float(flow[u'@delaySum'][1:-2]) / 1e6 / int(flow[u'@rxPackets']))
             jitter_averages.append(float(flow[u'@jitterSum'][1:-2]) / 1e6 / int(flow[u'@rxPackets']))
 
-    make_figure_and_print_summary(lost_percentages, 'lostPercentages')
-    make_figure_and_print_summary(delay_averages, 'delayAverages')
-    make_figure_and_print_summary(jitter_averages, 'jitterAverages')
+    return np.mean(loss_percentages), np.mean(delay_averages), np.mean(jitter_averages)
 
 
 def make_figure_and_print_summary(series, name):
-    sns.distplot(series)
-    plt.savefig('outputs/%s.svg' % name)
-    if 'SHOWPLOT' in os.environ:
-        plt.show()
+    try:
+        plt.close()
+        sns.distplot(series)
+        plt.savefig('outputs/%s.svg' % name)
+        if 'SHOWPLOT' in os.environ:
+            plt.show()
+    except Exception as e:
+        print("'{}' could not have its plot made due to '{}'".format(name, e.message))
 
-    stats = describe(series)
-    mean = getattr(stats, 'mean')
-    variance = getattr(stats, 'variance')
-    std_deviation = np.sqrt(variance)
+    mean = np.mean(series)
+    variance = np.var(series)
+    std_deviation = np.std(series)
 
-    print("{:<15} - Mean: {:<6.2f} - StdDev: {:<6.2f} - Variance: {:<8.2f}".format(name, mean, std_deviation, variance))
+    print("{:<15} - Mean: {:<7.2f} - StdDev: {:<6.2f} - Variance: {:<8.2f}".format(name, mean, std_deviation, variance))
 
 
 if __name__ == '__main__':
+    warnings.simplefilter(action='ignore', category=FutureWarning)
     main()

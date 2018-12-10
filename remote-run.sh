@@ -10,4 +10,4 @@ ssh poc <<'ENDSSH'
     ./run.sh
 ENDSSH
 
-rsync -azP poc:/home/alex/workspace/ns-allinone-3.28/ns-3.28/scratch/smartgrid5g/outputs ../smartgrid5g/
+rsync -az poc:/home/alex/workspace/ns-allinone-3.28/ns-3.28/scratch/smartgrid5g/outputs ../smartgrid5g/

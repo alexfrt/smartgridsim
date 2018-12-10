@@ -31,10 +31,14 @@ for i in $(seq 1 ${numTrials}); do
         --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
         --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
         > ${trialOutputDir}/out) &
+
+    sleep 1 # sleep between calls to avoid races in ns-3
 done
 wait
+echo "Done."
 
 # go back to the project directory
 cd - >/dev/null
 
-echo "Done."
+# compute the results
+./results.py
