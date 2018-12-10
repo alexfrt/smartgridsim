@@ -50,11 +50,36 @@ int main(int argc, char *argv[])
   std::cout << "Max elapsed clock time in seconds: " << maxElapsedClockTimeInSeconds << std::endl
             << std::endl;
 
+  // Configure the LTE parameters
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
   Config::SetDefault("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue(5)); //Transmission Mode 5: MIMO Multi-User.
 
+  // UlBandwidth/DlBandwidth = Network bandwith (MHz)
+  // UlBandwidth/DlBandwidth (25,50,75,100) = Network bandwith 5,10,15,20(MHz)
+  Config::SetDefault("ns3::LteEnbNetDevice::UlBandwidth", UintegerValue(100));
+  Config::SetDefault("ns3::LteEnbNetDevice::DlBandwidth", UintegerValue(100));
+
+  // Power settings
+  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(46));
+  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(20));
+
+  // DlEarfcn 100 = Downlink 2120(MHz)
+  // UlEarfcn 18100 = Uplink 1930(MHz)
+  Config::SetDefault("ns3::LteEnbNetDevice::DlEarfcn", UintegerValue(100));
+  Config::SetDefault("ns3::LteEnbNetDevice::UlEarfcn", UintegerValue(18000));
+
+  // Proportional fair scheduling
+  Config::SetDefault("ns3::LteHelper::Scheduler", StringValue("ns3::PfFfMacScheduler"));
+
+  Config::SetDefault("ns3::LteHelper::PathlossModel", StringValue("ns3::ItuR1411NlosOverRooftopPropagationLossModel"));
+
+  Config::SetDefault("ns3::LteAmc::AmcModel", EnumValue(LteAmc::PiroEW2010));
+  Config::SetDefault("ns3::LteAmc::Ber", DoubleValue(0.00005));
+
+  Config::SetDefault("ns3::LteEnbRrc::EpsBearerToRlcMapping", EnumValue(ns3::LteEnbRrc::RLC_AM_ALWAYS));
+
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
-  lteHelper->SetSchedulerType("ns3::FdMtFfMacScheduler");
+  lteHelper->SetEnbAntennaModelType("ns3::IsotropicAntennaModel");
 
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
   lteHelper->SetEpcHelper(epcHelper);
@@ -95,7 +120,6 @@ int main(int argc, char *argv[])
   smartMetersMobilityHelper.Install(ueNodes);
 
   // Setup the mobility model for the enbs
-  // TODO setup according to the actual positions
   MobilityHelper enbsMobilityHelper;
   enbsMobilityHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   enbsMobilityHelper.SetPositionAllocator(getEnbsPositionAllocator());
@@ -126,10 +150,7 @@ int main(int argc, char *argv[])
   }
 
   //Attach all UEs to the eNB
-  lteHelper->AttachToClosestEnb(ueLteDevs, enbLteDevs);
-  // lteHelper->Attach(ueLteDevs); // TODO make sure we are attaching according to some LTE algorithm
-  // for (uint16_t i = 0; i < ueLteDevs.GetN(); i++)
-  //   lteHelper->Attach(ueLteDevs.Get(i), enbLteDevs.Get(i % enbLteDevs.GetN()));
+  lteHelper->Attach(ueLteDevs);
 
   //Configure the applications
   UdpServerHelper serverApp(6565);
