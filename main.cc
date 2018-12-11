@@ -158,10 +158,10 @@ int main(int argc, char *argv[])
   {
     UdpClientHelper client(routerHostAddress, 6565);
     client.SetAttribute("MaxPackets", UintegerValue(maxSimulationTimeInSeconds));
-    client.SetAttribute("Interval", TimeValue(Seconds(rand() % 3 + 1)));
-    client.SetAttribute("PacketSize", UintegerValue(1000));
+    client.SetAttribute("Interval", TimeValue(MilliSeconds(rand() % 3000 + 100)));
+    client.SetAttribute("PacketSize", UintegerValue(rand() % 900 + 500));
     ApplicationContainer appContainer = client.Install(smartMeterNodes.Get(i));
-    appContainer.Start(Seconds(rand() % 3 + 1));
+    appContainer.Start(MilliSeconds(rand() % 3000 + 1000));
   }
 
   //Configure simulation output
