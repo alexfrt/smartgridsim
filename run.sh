@@ -45,4 +45,4 @@ echo "Done."
 cd - >/dev/null
 
 # compute the results
-./results.py
+MPLBACKEND="SVG" ./results.py
