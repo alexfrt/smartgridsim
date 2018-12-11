@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -16,23 +16,27 @@ cd ../.. >/dev/null
 ./waf --cwd="/tmp" --run "${program} --maxSimulationTimeInSeconds=0"
 
 # run the simulation
-for i in $(seq 1 ${numTrials}); do
-    if [ `expr $i % ${numCores}` -eq 1 ] && [ $i != 1 ]
-    then
-        echo "Waiting previous simulations to finish..."
-        wait
-    fi
+run=1
+for numberOfSmartMeters in "${numbersOfSmartMeters[@]}"; do
+    for trial in $(seq 1 ${numTrials}); do
+        if [ `expr ${run} % ${numCores}` -eq 1 ] && [ $run != 1 ]
+        then
+            echo "Waiting previous simulations to finish..."
+            wait
+        fi
 
-    echo "Starting trial ${i}"
-    trialOutputDir=${outputsDir}/trial${i}
-    mkdir -p ${trialOutputDir}
-    (./waf --cwd="${trialOutputDir}" --run "${program} \
-        --numberOfSmartMeters=${numberOfSmartMeters} \
-        --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
-        --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
-        > ${trialOutputDir}/out) &
-
-    sleep 1 # sleep between calls to avoid races in ns-3
+        echo "Starting simulation with ${numberOfSmartMeters} smart meters of trial ${trial}"
+        trialOutputDir=${outputsDir}/${numberOfSmartMeters}-meters/trial${trial}
+        mkdir -p ${trialOutputDir}
+        (./waf --cwd="${trialOutputDir}" --run "${program} \
+            --numberOfSmartMeters=${numberOfSmartMeters} \
+            --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
+            --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
+            > ${trialOutputDir}/out) &
+        
+        sleep 1 # sleep between calls to avoid races in ns-3
+        run=$((run+1))
+    done
 done
 wait
 echo "Done."
