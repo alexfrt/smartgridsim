@@ -32,17 +32,17 @@ def calculate_trial_statistics(directory):
 
     flows = doc['FlowMonitor']['FlowStats']['Flow']
 
-    loss_percentages = list()
-    delay_averages = list()
-    jitter_averages = list()
+    loss = list()
+    delay = list()
+    jitter = list()
 
     for flow in flows:
-        loss_percentages.append(100.0 * float(flow[u'@lostPackets']) / float(flow[u'@txPackets']))
+        loss.append(100.0 * float(flow[u'@lostPackets']) / float(flow[u'@txPackets']))
         if int(flow[u'@rxPackets']) > 1:
-            delay_averages.append(float(flow[u'@delaySum'][1:-2]) / 1e6 / int(flow[u'@rxPackets']))
-            jitter_averages.append(float(flow[u'@jitterSum'][1:-2]) / 1e6 / int(flow[u'@rxPackets']))
+            delay.append(float(flow[u'@delaySum'][1:-2]) / 1e6 / int(flow[u'@rxPackets']))
+            jitter.append(float(flow[u'@jitterSum'][1:-2]) / 1e6 / int(flow[u'@rxPackets']))
 
-    return np.mean(loss_percentages), np.mean(delay_averages), np.mean(jitter_averages)
+    return np.mean(loss), np.mean(delay), np.mean(jitter)
 
 
 def make_figure_and_print_summary(series, name):

@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 
   // Power settings
   Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(46));
-  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(20));
+  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(23));
 
   // DlEarfcn 100 = Downlink 2120(MHz)
   // UlEarfcn 18100 = Uplink 1930(MHz)
@@ -70,8 +70,6 @@ int main(int argc, char *argv[])
 
   // Proportional fair scheduling
   Config::SetDefault("ns3::LteHelper::Scheduler", StringValue("ns3::PfFfMacScheduler"));
-
-  Config::SetDefault("ns3::LteHelper::PathlossModel", StringValue("ns3::ItuR1411NlosOverRooftopPropagationLossModel"));
 
   Config::SetDefault("ns3::LteAmc::AmcModel", EnumValue(LteAmc::PiroEW2010));
   Config::SetDefault("ns3::LteAmc::Ber", DoubleValue(0.00005));
@@ -125,7 +123,7 @@ int main(int argc, char *argv[])
   enbsMobilityHelper.SetPositionAllocator(getEnbsPositionAllocator());
   enbsMobilityHelper.Install(enbNodes);
 
-  // Setup the mobility model to remaining nodes
+  // Setup the mobility model for remaining nodes
   NodeContainer remainingNodes;
   remainingNodes.Add(pgw);
   remainingNodes.Add(routerHost);
@@ -161,7 +159,7 @@ int main(int argc, char *argv[])
     UdpClientHelper client(routerHostAddress, 6565);
     client.SetAttribute("MaxPackets", UintegerValue(maxSimulationTimeInSeconds));
     client.SetAttribute("Interval", TimeValue(Seconds(rand() % 3 + 1)));
-    client.SetAttribute("PacketSize", UintegerValue(100));
+    client.SetAttribute("PacketSize", UintegerValue(1000));
     ApplicationContainer appContainer = client.Install(smartMeterNodes.Get(i));
     appContainer.Start(Seconds(rand() % 3 + 1));
   }
@@ -174,22 +172,13 @@ int main(int argc, char *argv[])
   flowMonitor = flowHelper.InstallAll();
 
   AnimationInterface anim("anim.xml");
-  int pointsBetweenSmartMeterNodes = 10;
   for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
   {
-    anim.SetConstantPosition(smartMeterNodes.Get(i), pointsBetweenSmartMeterNodes * i + pointsBetweenSmartMeterNodes, 10);
     anim.UpdateNodeColor(smartMeterNodes.Get(i), 0, 255, 0);
   }
-  int pointsBetweenEnbNodes = pointsBetweenSmartMeterNodes * smartMeterNodes.GetN() / enbNodes.GetN();
   for (uint32_t i = 0; i < enbNodes.GetN(); i++)
   {
-    anim.SetConstantPosition(enbNodes.Get(i), pointsBetweenEnbNodes * i + pointsBetweenEnbNodes, 30);
     anim.UpdateNodeColor(enbNodes.Get(i), 0, 255, 255);
-  }
-
-  for (uint32_t i = 0; i < remainingNodes.GetN(); i++)
-  {
-    anim.SetConstantPosition(remainingNodes.Get(i), 10 * i + 10, 50);
   }
 
   //Run the simulation
@@ -198,7 +187,9 @@ int main(int argc, char *argv[])
   simulationTimeController.join();
 
   //End of simulation
+  flowMonitor->CheckForLostPackets();
   flowMonitor->SerializeToXmlFile("FlowMon.xml", true, true);
+
   Simulator::Destroy();
 
   return 0;
