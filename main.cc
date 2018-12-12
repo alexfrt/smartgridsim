@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
   Ptr<UniformRandomVariable> randomVariable = CreateObject<UniformRandomVariable>();
   for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
   {
-    uint pktSize = randomVariable->GetInteger(100, 100 * 15 * (1 - aggregationPercentage / 100.0));
+    uint pktSize = randomVariable->GetInteger(100, 100 * 10 * (1 - aggregationPercentage / 100.0));
     uint interval = randomVariable->GetInteger(10, 100);
 
     UdpClientHelper client(routerHostAddress, 6565);

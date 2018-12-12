@@ -63,36 +63,61 @@ def calculate_statistics_by_smartmeters_count(directory):
     }
 
 
-def plot_statistics(data, metric):
-    labels = list()
-    values = list()
-    errors = list()
-
-    for n, stats in data.iteritems():
-        labels.append(n)
-        values.append(stats[metric]['mean'])
-        errors.append(stats[metric]['ci95'])
-
+def plot_statistics(data, metric, xlabel, ylabel, seriesformat, title):
     fig, ax = plt.subplots()
-    ax.errorbar(labels, values, yerr=errors, ecolor='red')
+    
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    
+    series_handles = list()
+    series_labels = list()
+    
+    line_styles = ['solid', 'dashed', 'dashdot', 'dotted']
+    colors = ['#24d6d6', '#2424d6', '#d6d624']
+    i = 1
+    
+    for series, series_stats in data.iteritems():   
+        labels=list()
+        values=list()
+        errors=list()
+
+        for n, stats in series_stats.iteritems():
+            labels.append(n)
+            values.append(stats[metric]['mean'])
+            errors.append(stats[metric]['ci95'])
+
+        style = line_styles[i%len(line_styles)]
+        color = colors[i%len(colors)]
+        
+        e = ax.errorbar(labels, values, yerr=errors, color=color, ecolor='#d62424', linestyle=style, marker='.', linewidth=3, ms=15, elinewidth=1.5)
+        
+        series_handles.append(e)
+        series_labels.append(seriesformat.format(series))
+        
+        i += 1
+    
+    ax.legend(series_handles, series_labels, loc=2)
 
     return fig
 
 
 def main():
-    data = dict()
+    dataByAggPercentage = dict()
 
-    directory = 'outputs'
-    for subdir in filter(lambda x: x.endswith('-meters'), os.listdir(directory)):
-        stats = calculate_statistics_by_smartmeters_count("%s/%s" % (directory, subdir))
-        numberOfSmartMeters = int(subdir[:-len('-meters')])
-        data[numberOfSmartMeters] = stats
+    basedir = 'outputs'
+    for directory in filter(lambda x: x.startswith('agg'), os.listdir(basedir)):
+        data = dict()
+        for subdir in filter(lambda x: x.endswith('-meters'), os.listdir("%s/%s" % (basedir, directory))):
+            stats = calculate_statistics_by_smartmeters_count("%s/%s/%s" % (basedir, directory, subdir))
+            numberOfSmartMeters = int(subdir[:-len('-meters')])
+            data[numberOfSmartMeters] = stats
+        data = OrderedDict(sorted(data.items(), key=lambda x: x[0]))
+        dataByAggPercentage[int(directory[3:])] = data
 
-    data = OrderedDict(sorted(data.items(), key=lambda x: x[0]))
-
-    plot_statistics(data, 'delay').savefig("%s/%s" % (directory, 'delay.svg'))
-    plot_statistics(data, 'jitter').savefig("%s/%s" % (directory, 'jitter.svg'))
-    plot_statistics(data, 'loss').savefig("%s/%s" % (directory, 'loss.svg'))
+    plot_statistics(dataByAggPercentage, 'delay', '# of Smart Meters', 'Delay (ms)', '{}% aggregation', 'Perceived delay').savefig("%s/%s" % (basedir, 'delay.svg'))
+    plot_statistics(dataByAggPercentage, 'jitter', '# of Smart Meters', 'Jitter (ms)', '{}% aggregation', 'Perceived jitter').savefig("%s/%s" % (basedir, 'jitter.svg'))
+    plot_statistics(dataByAggPercentage, 'loss', '# of Smart Meters', 'Loss %', '{}% aggregation', 'Perceived loss').savefig("%s/%s" % (basedir, 'loss.svg'))
 
 
 if __name__ == "__main__":
