@@ -28,12 +28,12 @@ for numberOfSmartMeters in "${numbersOfSmartMeters[@]}"; do
         echo "Starting simulation with ${numberOfSmartMeters} smart meters of trial ${trial}"
         trialOutputDir=${outputsDir}/${numberOfSmartMeters}-meters/trial${trial}
         mkdir -p ${trialOutputDir}
-        (./waf --cwd="${trialOutputDir}" --run "${program} \
+        (NS_GLOBAL_VALUE="RngRun=${run}" ./waf --cwd="${trialOutputDir}" --run "${program} \
             --numberOfSmartMeters=${numberOfSmartMeters} \
             --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
             --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
             > ${trialOutputDir}/out) &
-        
+
         sleep 1 # sleep between calls to avoid races in ns-3
         run=$((run+1))
     done

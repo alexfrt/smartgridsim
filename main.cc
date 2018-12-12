@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
   std::cout << "Max elapsed clock time in seconds: " << maxElapsedClockTimeInSeconds << std::endl
             << std::endl;
 
+  numberOfSmartMeters /= 60;
+
   // Configure the LTE parameters
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
   Config::SetDefault("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue(5)); //Transmission Mode 5: MIMO Multi-User.
@@ -150,18 +152,24 @@ int main(int argc, char *argv[])
     lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(0));
     lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
     lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
+    lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(1));
     enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i)));
 
     lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
     lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(360 / 3));
     lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
     lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
+    lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(2));
     enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i + 1)));
 
     lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
     lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(2 * 360 / 3));
     lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
     lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
+    lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(3));
     enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i + 2)));
   }
 
@@ -189,10 +197,10 @@ int main(int argc, char *argv[])
   {
     UdpClientHelper client(routerHostAddress, 6565);
     client.SetAttribute("MaxPackets", UintegerValue(maxSimulationTimeInSeconds));
-    client.SetAttribute("Interval", TimeValue(MilliSeconds(rand() % 3000 + 100)));
-    client.SetAttribute("PacketSize", UintegerValue(rand() % 900 + 500));
+    client.SetAttribute("Interval", TimeValue(MilliSeconds(rand() % 90 + 10)));
+    client.SetAttribute("PacketSize", UintegerValue(rand() % 1000 + 100));
     ApplicationContainer appContainer = client.Install(smartMeterNodes.Get(i));
-    appContainer.Start(MilliSeconds(rand() % 2250 + 750));
+    appContainer.Start(MilliSeconds(500));
   }
 
   //Configure simulation output
