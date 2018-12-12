@@ -15,6 +15,7 @@
 #include "ns3/flow-monitor.h"
 #include "ns3/geographic-positions.h"
 #include "ns3/config-store.h"
+#include "ns3/buildings-helper.h"
 
 #define NUMBER_OF_ENBS 12
 
@@ -61,7 +62,7 @@ int main(int argc, char *argv[])
 
   // Power settings
   Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(46));
-  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(23));
+  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(30));
 
   // DlEarfcn 100 = Downlink 2120(MHz)
   // UlEarfcn 18100 = Uplink 1930(MHz)
@@ -76,8 +77,14 @@ int main(int argc, char *argv[])
 
   Config::SetDefault("ns3::LteEnbRrc::EpsBearerToRlcMapping", EnumValue(ns3::LteEnbRrc::RLC_AM_ALWAYS));
 
+  Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(true));
+  Config::SetDefault("ns3::LteHelper::NumberOfComponentCarriers", UintegerValue(2));
+  Config::SetDefault("ns3::LteHelper::EnbComponentCarrierManager", StringValue("ns3::RrComponentCarrierManager"));
+
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
-  lteHelper->SetEnbAntennaModelType("ns3::IsotropicAntennaModel");
+  lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
+  lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
+  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(1));
 
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
   lteHelper->SetEpcHelper(epcHelper);
@@ -108,7 +115,7 @@ int main(int argc, char *argv[])
 
   NodeContainer smartMeterNodes;
   NodeContainer enbNodes;
-  enbNodes.Create(NUMBER_OF_ENBS);
+  enbNodes.Create(3 * NUMBER_OF_ENBS); //each base station has 3 antennas
   smartMeterNodes.Create(numberOfSmartMeters);
 
   // Setup the mobility model for the smart meters
@@ -116,12 +123,14 @@ int main(int argc, char *argv[])
   smartMetersMobilityHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   smartMetersMobilityHelper.SetPositionAllocator(generateRandomPositionAllocatorAroundCenter(numberOfSmartMeters, 95, 1000));
   smartMetersMobilityHelper.Install(smartMeterNodes);
+  BuildingsHelper::Install(smartMeterNodes);
 
   // Setup the mobility model for the enbs
   MobilityHelper enbsMobilityHelper;
   enbsMobilityHelper.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   enbsMobilityHelper.SetPositionAllocator(getEnbsPositionAllocator());
   enbsMobilityHelper.Install(enbNodes);
+  BuildingsHelper::Install(enbNodes);
 
   // Setup the mobility model for remaining nodes
   NodeContainer remainingNodes;
@@ -134,7 +143,29 @@ int main(int argc, char *argv[])
   mobilityHelper.Install(remainingNodes);
 
   // Install LTE Devices to the nodes
-  NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice(enbNodes);
+  NetDeviceContainer enbLteDevs;
+  for (uint32_t i = 0; i < enbNodes.GetN(); i += 3)
+  {
+    lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
+    lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(0));
+    lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
+    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i)));
+
+    lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
+    lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(360 / 3));
+    lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
+    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i + 1)));
+
+    lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
+    lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(2 * 360 / 3));
+    lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
+    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i + 2)));
+  }
+
+  lteHelper->SetEnbAntennaModelType("ns3::IsotropicAntennaModel");
   NetDeviceContainer smartMeterLteDevs = lteHelper->InstallUeDevice(smartMeterNodes);
 
   // Install the IP stack on the UEs
@@ -161,7 +192,7 @@ int main(int argc, char *argv[])
     client.SetAttribute("Interval", TimeValue(MilliSeconds(rand() % 3000 + 100)));
     client.SetAttribute("PacketSize", UintegerValue(rand() % 900 + 500));
     ApplicationContainer appContainer = client.Install(smartMeterNodes.Get(i));
-    appContainer.Start(MilliSeconds(rand() % 3000 + 1000));
+    appContainer.Start(MilliSeconds(rand() % 2250 + 750));
   }
 
   //Configure simulation output
@@ -171,15 +202,15 @@ int main(int argc, char *argv[])
   FlowMonitorHelper flowHelper;
   flowMonitor = flowHelper.InstallAll();
 
-  AnimationInterface anim("anim.xml");
-  for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
-  {
-    anim.UpdateNodeColor(smartMeterNodes.Get(i), 0, 255, 0);
-  }
-  for (uint32_t i = 0; i < enbNodes.GetN(); i++)
-  {
-    anim.UpdateNodeColor(enbNodes.Get(i), 0, 255, 255);
-  }
+  // AnimationInterface anim("anim.xml");
+  // for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
+  // {
+  //   anim.UpdateNodeColor(smartMeterNodes.Get(i), 0, 255, 0);
+  // }
+  // for (uint32_t i = 0; i < enbNodes.GetN(); i++)
+  // {
+  //   anim.UpdateNodeColor(enbNodes.Get(i), 0, 255, 255);
+  // }
 
   //Run the simulation
   std::thread simulationTimeController(controlSimulationTime, maxSimulationTimeInSeconds, maxElapsedClockTimeInSeconds);
@@ -269,11 +300,14 @@ Ptr<ListPositionAllocator> getEnbsPositionAllocator()
   Ptr<ListPositionAllocator> positionAllocator = CreateObject<ListPositionAllocator>();
   for (int i = 0; i < NUMBER_OF_ENBS; i++)
   {
-    positionAllocator->Add(GeographicPositions::GeographicToCartesianCoordinates(
-        coordinates[i][0],
-        coordinates[i][1],
-        100,
-        GeographicPositions::EarthSpheroidType::SPHERE));
+    for (int j = 0; j < 3; j++)
+    {
+      positionAllocator->Add(GeographicPositions::GeographicToCartesianCoordinates(
+          coordinates[i][0],
+          coordinates[i][1],
+          100,
+          GeographicPositions::EarthSpheroidType::SPHERE));
+    }
   }
 
   return positionAllocator;

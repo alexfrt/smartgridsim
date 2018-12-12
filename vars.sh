@@ -3,8 +3,8 @@
 # Simulation params
 numTrials=2
 maxSimulationTimeInSeconds=15
-maxElapsedClockTimeInSeconds=600
-numbersOfSmartMeters=(100 200 300)
+maxElapsedClockTimeInSeconds=1500
+numbersOfSmartMeters=(1600 800 400 200)
 
 # Execution variables
 program=${PWD##*/}

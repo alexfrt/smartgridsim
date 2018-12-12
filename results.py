@@ -80,13 +80,15 @@ def plot_statistics(data, metric):
 
 
 def main():
-    data = OrderedDict()
+    data = dict()
 
     directory = 'outputs'
     for subdir in filter(lambda x: x.endswith('-meters'), os.listdir(directory)):
         stats = calculate_statistics_by_smartmeters_count("%s/%s" % (directory, subdir))
         numberOfSmartMeters = int(subdir[:-len('-meters')])
         data[numberOfSmartMeters] = stats
+
+    data = OrderedDict(sorted(data.items(), key=lambda x: x[0]))
 
     plot_statistics(data, 'delay').savefig("%s/%s" % (directory, 'delay.svg'))
     plot_statistics(data, 'jitter').savefig("%s/%s" % (directory, 'jitter.svg'))
