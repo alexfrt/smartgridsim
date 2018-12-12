@@ -17,25 +17,28 @@ cd ../.. >/dev/null
 
 # run the simulation
 run=1
-for numberOfSmartMeters in "${numbersOfSmartMeters[@]}"; do
-    for trial in $(seq 1 ${numTrials}); do
-        if [ `expr ${run} % ${numCores}` -eq 1 ] && [ $run != 1 ]
-        then
-            echo "Waiting previous simulations to finish..."
-            wait
-        fi
+for aggregationPercentage in "${aggregationPercentages[@]}"; do
+    for numberOfSmartMeters in "${numbersOfSmartMeters[@]}"; do
+        for trial in $(seq 1 ${numTrials}); do
+            if [ `expr ${run} % ${numCores}` -eq 1 ] && [ $run != 1 ]
+            then
+                echo "Waiting previous simulations to finish..."
+                wait
+            fi
 
-        echo "Starting simulation with ${numberOfSmartMeters} smart meters of trial ${trial}"
-        trialOutputDir=${outputsDir}/${numberOfSmartMeters}-meters/trial${trial}
-        mkdir -p ${trialOutputDir}
-        (NS_GLOBAL_VALUE="RngRun=${run}" ./waf --cwd="${trialOutputDir}" --run "${program} \
-            --numberOfSmartMeters=${numberOfSmartMeters} \
-            --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
-            --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
-            > ${trialOutputDir}/out) &
+            echo "Starting simulation with aggregation percentage of ${aggregationPercentage}% and ${numberOfSmartMeters} smart meters on trial ${trial}"
+            trialOutputDir=${outputsDir}/agg${aggregationPercentage}/${numberOfSmartMeters}-meters/trial${trial}
+            mkdir -p ${trialOutputDir}
+            (NS_GLOBAL_VALUE="RngRun=${run}" ./waf --cwd="${trialOutputDir}" --run "${program} \
+                --numberOfSmartMeters=${numberOfSmartMeters} \
+                --aggregationPercentage=${aggregationPercentage} \
+                --maxSimulationTimeInSeconds=${maxSimulationTimeInSeconds} \
+                --maxElapsedClockTimeInSeconds=${maxElapsedClockTimeInSeconds}" \
+                > ${trialOutputDir}/out) &
 
-        sleep 1 # sleep between calls to avoid races in ns-3
-        run=$((run+1))
+            sleep 1 # sleep between calls to avoid races in ns-3
+            run=$((run+1))
+        done
     done
 done
 wait

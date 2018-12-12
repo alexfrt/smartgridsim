@@ -33,11 +33,13 @@ int main(int argc, char *argv[])
   LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
 
   int numberOfSmartMeters = 10;
+  int aggregationPercentage = 0;
   int maxSimulationTimeInSeconds = 10;
   int maxElapsedClockTimeInSeconds = 10;
 
   CommandLine cmd;
   cmd.AddValue("numberOfSmartMeters", "Number of Smart Meters", numberOfSmartMeters);
+  cmd.AddValue("aggregationPercentage", "The aggregation percentage to be used in simulation", aggregationPercentage);
   cmd.AddValue("maxSimulationTimeInSeconds", "Max simulation time in seconds", maxSimulationTimeInSeconds);
   cmd.AddValue("maxElapsedClockTimeInSeconds", "Max elapsed clock time in seconds", maxElapsedClockTimeInSeconds);
   cmd.Parse(argc, argv);
@@ -47,11 +49,19 @@ int main(int argc, char *argv[])
     return 0;
 
   std::cout << "Number of Smart Meters: " << numberOfSmartMeters << std::endl;
+  std::cout << "Aggregation percentage: " << aggregationPercentage << std::endl;
   std::cout << "Max simulation time in seconds: " << maxSimulationTimeInSeconds << std::endl;
   std::cout << "Max elapsed clock time in seconds: " << maxElapsedClockTimeInSeconds << std::endl
             << std::endl;
 
-  numberOfSmartMeters /= 60;
+  numberOfSmartMeters = ((100 - aggregationPercentage) / 100.0) * numberOfSmartMeters / 60;
+  if (numberOfSmartMeters < 1)
+  {
+    std::cout << "There's no smart meters allocated for this simulation, please provide feasible parameters" << std::endl;
+    return 1;
+  }
+
+  std::cout << "Number of simultaneous transmissors: " << numberOfSmartMeters << std::endl;
 
   // Configure the LTE parameters
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
@@ -193,12 +203,16 @@ int main(int argc, char *argv[])
   UdpServerHelper serverApp(6565);
   serverApp.Install(routerHost);
 
+  Ptr<UniformRandomVariable> randomVariable = CreateObject<UniformRandomVariable>();
   for (uint32_t i = 0; i < smartMeterNodes.GetN(); i++)
   {
+    uint pktSize = randomVariable->GetInteger(100, 100 * 15 * (1 - aggregationPercentage / 100.0));
+    uint interval = randomVariable->GetInteger(10, 100);
+
     UdpClientHelper client(routerHostAddress, 6565);
     client.SetAttribute("MaxPackets", UintegerValue(maxSimulationTimeInSeconds));
-    client.SetAttribute("Interval", TimeValue(MilliSeconds(rand() % 90 + 10)));
-    client.SetAttribute("PacketSize", UintegerValue(rand() % 1000 + 100));
+    client.SetAttribute("Interval", TimeValue(MilliSeconds(interval)));
+    client.SetAttribute("PacketSize", UintegerValue(pktSize));
     ApplicationContainer appContainer = client.Install(smartMeterNodes.Get(i));
     appContainer.Start(MilliSeconds(500));
   }

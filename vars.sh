@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Simulation params
-numTrials=30
+numTrials=4
 maxSimulationTimeInSeconds=5
 maxElapsedClockTimeInSeconds=1200
-numbersOfSmartMeters=(10000 8000 6000 4000 2000)
+numbersOfSmartMeters=(4000 2000)
+aggregationPercentages=(0 25)
 
 # Execution variables
 program=${PWD##*/}
