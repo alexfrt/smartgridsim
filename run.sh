@@ -5,6 +5,14 @@ set -e
 # read the simulation variables
 . ./vars.sh
 
+echo "Number of trials: ${numTrials}"
+echo "Max simulation time in seconds: ${maxSimulationTimeInSeconds}"
+echo "Max elapsed time in seconds: ${maxElapsedClockTimeInSeconds}"
+echo "Number of smart meters: ${numbersOfSmartMeters[@]}"
+echo "Aggregation percentages: ${aggregationPercentages[@]}"
+echo "Starting simulations..."
+echo
+
 # clean the outputs directory
 rm -rf ${outputsDir}
 mkdir -p ${outputsDir}
@@ -17,8 +25,8 @@ cd ../.. >/dev/null
 
 # run the simulation
 run=1
-for aggregationPercentage in "${aggregationPercentages[@]}"; do
-    for numberOfSmartMeters in "${numbersOfSmartMeters[@]}"; do
+for aggregationPercentage in ${aggregationPercentages[@]}; do
+    for numberOfSmartMeters in ${numbersOfSmartMeters[@]}; do
         for trial in $(seq 1 ${numTrials}); do
             if [ `expr ${run} % ${numCores}` -eq 1 ] && [ $run != 1 ]
             then
