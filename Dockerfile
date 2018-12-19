@@ -1,7 +1,7 @@
 FROM ubuntu:18.04 as intermediate
 
 # Download and install dependencies
-RUN apt update && apt install -y \
+RUN apt update && apt install -y python-tk && apt install -y \
         wget gcc g++ python python-pip \
         gir1.2-goocanvas-2.0 python-gi python-gi-cairo python-pygraphviz python3-gi \
         python3-gi-cairo python3-pygraphviz gir1.2-gtk-3.0 ipython ipython3 \
@@ -9,7 +9,7 @@ RUN apt update && apt install -y \
         cvs bzr unrar gdb valgrind uncrustify gsl-bin libgsl-dev flex bison \
         libfl-dev tcpdump sqlite sqlite3 libsqlite3-dev libxml2 libxml2-dev cmake \
         libc6-dev libc6-dev-i386 libclang-dev llvm-dev automake libgtk2.0-0 \
-        libgtk2.0-dev vtun lxc libboost-signals-dev libboost-filesystem-dev python-tk \
+        libgtk2.0-dev vtun lxc libboost-signals-dev libboost-filesystem-dev \
      && rm -rf /var/lib/apt/lists/*
 RUN pip install cxxfilt scipy matplotlib xmltodict
 
