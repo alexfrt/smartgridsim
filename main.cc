@@ -73,8 +73,12 @@ int main(int argc, char *argv[])
   Config::SetDefault("ns3::LteEnbNetDevice::DlBandwidth", UintegerValue(100));
 
   // Power settings
-  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(46));
-  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(30));
+  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(49));
+  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(24));
+
+  // Noise settings
+  Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5));
+  Config::SetDefault("ns3::LteUePhy::NoiseFigure", DoubleValue(7));
 
   // DlEarfcn 100 = Downlink 2120(MHz)
   // UlEarfcn 18100 = Uplink 1930(MHz)
@@ -161,7 +165,7 @@ int main(int argc, char *argv[])
     lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
     lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(0));
     lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
-    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(17.0));
     lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
     lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(1));
     enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i)));
@@ -169,7 +173,7 @@ int main(int argc, char *argv[])
     lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
     lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(360 / 3));
     lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
-    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(17.0));
     lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
     lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(2));
     enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i + 1)));
@@ -177,7 +181,7 @@ int main(int argc, char *argv[])
     lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
     lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(2 * 360 / 3));
     lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(120));
-    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(0.0));
+    lteHelper->SetEnbAntennaModelAttribute("MaxGain", DoubleValue(17.0));
     lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
     lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(3));
     enbLteDevs.Add(lteHelper->InstallEnbDevice(enbNodes.Get(i + 2)));
