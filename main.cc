@@ -16,6 +16,7 @@
 #include "ns3/geographic-positions.h"
 #include "ns3/config-store.h"
 #include "ns3/buildings-helper.h"
+#include "ns3/cost231-propagation-loss-model.h"
 
 #define NUMBER_OF_ENBS 12
 
@@ -101,6 +102,9 @@ int main(int argc, char *argv[])
   lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
   lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
   lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue(1));
+
+  // Propagation loss model
+  lteHelper->SetAttribute("PathlossModel", StringValue("ns3::Cost231PropagationLossModel"));
 
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
   lteHelper->SetEpcHelper(epcHelper);
